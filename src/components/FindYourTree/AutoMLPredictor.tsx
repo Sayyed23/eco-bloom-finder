@@ -3,9 +3,10 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
-import { Droplets, ThermometerSun, Wind } from "lucide-react";
+import { Droplets, ThermometerSun, Wind, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import LocationInput from "./LocationInput";
 
 type TreePrediction = {
   id: string;
@@ -20,10 +21,24 @@ const AutoMLPredictor = () => {
   const [aqi, setAqi] = useState<number[]>([50]); // default AQI: 50
   const [temperature, setTemperature] = useState<number[]>([20]); // default temperature: 20°C
   const [space, setSpace] = useState<number[]>([5]); // default space: 5m²
+  const [location, setLocation] = useState("");
   const [predictions, setPredictions] = useState<TreePrediction[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  const handleLocationSelect = (selectedLocation: string) => {
+    setLocation(selectedLocation);
+  };
+
   const handleGetPredictions = async () => {
+    if (!location) {
+      toast({
+        title: "Location Required",
+        description: "Please enter a location before getting recommendations.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("predict-tree-suitability", {
@@ -31,6 +46,7 @@ const AutoMLPredictor = () => {
           aqi: aqi[0],
           temperature: temperature[0],
           space: space[0],
+          location,
         },
       });
 
@@ -64,6 +80,10 @@ const AutoMLPredictor = () => {
         <p className="mb-4 text-sm text-muted-foreground">
           Our AI model predicts the best tree species for your environmental conditions.
         </p>
+
+        <div className="mb-4">
+          <LocationInput onLocationSelect={handleLocationSelect} />
+        </div>
 
         <div className="mb-4 space-y-4">
           <div className="space-y-2">
@@ -144,7 +164,7 @@ const AutoMLPredictor = () => {
         
         <Button
           onClick={handleGetPredictions}
-          disabled={isLoading}
+          disabled={isLoading || !location}
           className="w-full bg-eco-green hover:bg-eco-dark-green"
         >
           {isLoading ? "Getting Predictions..." : "Get AI Recommendations"}
@@ -153,7 +173,7 @@ const AutoMLPredictor = () => {
 
       {predictions.length > 0 && (
         <div className="space-y-4">
-          <h3 className="font-medium">Recommended Trees</h3>
+          <h3 className="font-medium">Recommended Trees for {location}</h3>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
             {predictions.map((tree) => (
               <Card key={tree.id} className="overflow-hidden">

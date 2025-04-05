@@ -3,23 +3,61 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MapPin } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 type LocationInputProps = {
   onLocationSelect: (location: string) => void;
+  initialLocation?: string;
 };
 
-const GOOGLE_MAPS_API_KEY = "YOUR_GOOGLE_MAPS_API_KEY";
-
-const LocationInput = ({ onLocationSelect }: LocationInputProps) => {
-  const [location, setLocation] = useState("");
+const LocationInput = ({ onLocationSelect, initialLocation = "" }: LocationInputProps) => {
+  const [location, setLocation] = useState(initialLocation);
   const [isLoading, setIsLoading] = useState(false);
+  const [googleMapsApiKey, setGoogleMapsApiKey] = useState<string | null>(null);
+  const { toast } = useToast();
   const autocompleteRef = useRef<HTMLInputElement>(null);
   const autocompleteInstanceRef = useRef<google.maps.places.Autocomplete | null>(null);
 
   useEffect(() => {
+    // Set initial location if provided
+    if (initialLocation && !location) {
+      setLocation(initialLocation);
+    }
+  }, [initialLocation]);
+
+  useEffect(() => {
+    const getGoogleMapsApiKey = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('get-google-maps-key');
+        
+        if (error) {
+          console.error("Failed to get Google Maps API key:", error);
+          toast({
+            title: "Error",
+            description: "Could not load location services. Please try again later.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        if (data && data.key) {
+          setGoogleMapsApiKey(data.key);
+        }
+      } catch (error) {
+        console.error("Error fetching Google Maps API key:", error);
+      }
+    };
+    
+    getGoogleMapsApiKey();
+  }, [toast]);
+
+  useEffect(() => {
+    if (!googleMapsApiKey) return;
+    
     // Load Google Maps JavaScript API
     const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&libraries=places`;
     script.async = true;
     script.defer = true;
     script.onload = initAutocomplete;
@@ -28,7 +66,7 @@ const LocationInput = ({ onLocationSelect }: LocationInputProps) => {
     return () => {
       document.body.removeChild(script);
     };
-  }, []);
+  }, [googleMapsApiKey]);
 
   const initAutocomplete = () => {
     if (autocompleteRef.current && window.google) {
@@ -61,9 +99,19 @@ const LocationInput = ({ onLocationSelect }: LocationInputProps) => {
         async (position) => {
           const { latitude, longitude } = position.coords;
           try {
+            if (!googleMapsApiKey) {
+              setIsLoading(false);
+              toast({
+                title: "Error",
+                description: "Location services are not available. Please try entering your location manually.",
+                variant: "destructive",
+              });
+              return;
+            }
+            
             // Reverse geocoding to get address from coordinates
             const response = await fetch(
-              `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${GOOGLE_MAPS_API_KEY}`
+              `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${googleMapsApiKey}`
             );
             const data = await response.json();
             
@@ -88,6 +136,11 @@ const LocationInput = ({ onLocationSelect }: LocationInputProps) => {
         (error) => {
           console.error("Error getting location:", error);
           setIsLoading(false);
+          toast({
+            title: "Location Error",
+            description: "Could not access your location. Please check your browser permissions.",
+            variant: "destructive",
+          });
         }
       );
     }

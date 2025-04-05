@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import Header from "@/components/Header";
@@ -30,6 +29,13 @@ const Index = () => {
     }
   };
 
+  const toggleAutoML = () => {
+    setShowAutoML(!showAutoML);
+    if (showAutoML) {
+      setResultsVisible(false);
+    }
+  };
+
   return (
     <div className="min-h-screen pb-16">
       <Header />
@@ -42,20 +48,25 @@ const Index = () => {
         </div>
         
         <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-lg font-medium">Basic Recommendations</h2>
+          <h2 className="text-lg font-medium">
+            {showAutoML ? "AI-Powered Recommendations" : "Basic Recommendations"}
+          </h2>
           <Button 
             variant="outline" 
             size="sm"
-            onClick={() => setShowAutoML(!showAutoML)}
+            onClick={toggleAutoML}
             className="text-xs"
           >
-            {showAutoML ? "Hide Advanced AI" : "Show Advanced AI"}
+            {showAutoML ? "Show Basic Recommendations" : "Show Advanced AI"}
           </Button>
         </div>
         
         {!showAutoML ? (
           <>
-            <LocationInput onLocationSelect={handleLocationSelect} />
+            <LocationInput 
+              onLocationSelect={handleLocationSelect} 
+              initialLocation={location}
+            />
             <SpaceAvailability onSpaceChange={handleSpaceChange} />
             
             <Button 
