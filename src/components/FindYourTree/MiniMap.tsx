@@ -1,10 +1,76 @@
 
+import { useEffect, useRef } from "react";
+
 type MiniMapProps = {
   isVisible: boolean;
   location: string;
 };
 
+const GOOGLE_MAPS_API_KEY = "YOUR_GOOGLE_MAPS_API_KEY";
+
 const MiniMap = ({ isVisible, location }: MiniMapProps) => {
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<google.maps.Map | null>(null);
+  
+  useEffect(() => {
+    if (!isVisible || !location || !mapRef.current) return;
+
+    // Initialize Google Maps only when component is visible and has a location
+    const loadGoogleMaps = async () => {
+      // Check if Google Maps script is already loaded
+      if (!window.google || !window.google.maps) {
+        const script = document.createElement("script");
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places`;
+        script.async = true;
+        script.defer = true;
+        document.body.appendChild(script);
+
+        return new Promise<void>((resolve) => {
+          script.onload = () => resolve();
+        });
+      }
+    };
+
+    const initMap = async () => {
+      await loadGoogleMaps();
+      
+      // Use geocoding to convert address to coordinates
+      const geocoder = new google.maps.Geocoder();
+      geocoder.geocode({ address: location }, (results, status) => {
+        if (status === "OK" && results && results[0]) {
+          const { location: coords } = results[0].geometry;
+          
+          if (mapRef.current) {
+            mapInstanceRef.current = new google.maps.Map(mapRef.current, {
+              center: coords,
+              zoom: 15,
+              mapTypeId: google.maps.MapTypeId.ROADMAP,
+              mapTypeControl: false,
+              streetViewControl: false,
+              fullscreenControl: false
+            });
+
+            // Add marker for the location
+            new google.maps.Marker({
+              position: coords,
+              map: mapInstanceRef.current,
+              title: "Planting Location",
+              icon: {
+                path: google.maps.SymbolPath.CIRCLE,
+                fillColor: "#22c55e", // Green color
+                fillOpacity: 1,
+                strokeWeight: 0,
+                scale: 10
+              }
+            });
+          }
+        }
+      });
+    };
+
+    initMap();
+  }, [isVisible, location]);
+
   if (!isVisible) {
     return null;
   }
@@ -13,18 +79,7 @@ const MiniMap = ({ isVisible, location }: MiniMapProps) => {
     <div className="mt-8 animate-fade-in">
       <h2 className="mb-4 text-xl font-bold">Planting Location</h2>
       <div className="overflow-hidden rounded-lg border">
-        <div className="relative h-64 w-full bg-gray-100">
-          {/* In a real implementation, this would be an actual map component */}
-          <div className="flex h-full items-center justify-center bg-[url('https://images.unsplash.com/photo-1500673922987-e212871fec22?auto=format&fit=crop&q=80')] bg-cover bg-center">
-            <div className="absolute inset-0 bg-eco-green/10"></div>
-            <div className="rounded-full bg-eco-green p-2 text-white">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
-                <circle cx="12" cy="10" r="3"></circle>
-              </svg>
-            </div>
-          </div>
-        </div>
+        <div ref={mapRef} className="h-64 w-full bg-gray-100"></div>
         <div className="bg-white p-3">
           <div className="text-sm">
             <span className="font-medium">Selected Location:</span> {location}
