@@ -75,6 +75,14 @@ declare namespace google.maps {
     };
     formatted_address: string;
   }
+
+  // Add MapTypeId enum
+  export const MapTypeId: {
+    ROADMAP: string;
+    SATELLITE: string;
+    HYBRID: string;
+    TERRAIN: string;
+  };
 }
 
 declare namespace google.maps.places {
