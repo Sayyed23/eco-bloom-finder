@@ -10,8 +10,8 @@ import { Droplets, ThermometerSun, Wind, Search } from "lucide-react";
 
 const TreeProfiles = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterWater, setFilterWater] = useState("");
-  const [filterGrowth, setFilterGrowth] = useState("");
+  const [filterWater, setFilterWater] = useState("all");
+  const [filterGrowth, setFilterGrowth] = useState("all");
 
   // Mock data for tree profiles
   const trees: Tree[] = [
@@ -94,9 +94,9 @@ const TreeProfiles = () => {
     const matchesSearch = tree.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                          tree.scientificName.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesWater = filterWater ? 
-      tree.benefits.some(b => b.name === "Water" && b.level === filterWater) : 
-      true;
+    const matchesWater = filterWater === "all" ? 
+      true : 
+      tree.benefits.some(b => b.name === "Water" && b.level === filterWater);
     
     // In a real app, we'd have a growth rate property to filter on
     return matchesSearch && matchesWater;
@@ -134,7 +134,7 @@ const TreeProfiles = () => {
                   <SelectValue placeholder="All" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All</SelectItem>
+                  <SelectItem value="all">All</SelectItem>
                   <SelectItem value="low">Low</SelectItem>
                   <SelectItem value="medium">Medium</SelectItem>
                   <SelectItem value="high">High</SelectItem>
@@ -151,7 +151,7 @@ const TreeProfiles = () => {
                   <SelectValue placeholder="All" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All</SelectItem>
+                  <SelectItem value="all">All</SelectItem>
                   <SelectItem value="slow">Slow</SelectItem>
                   <SelectItem value="moderate">Moderate</SelectItem>
                   <SelectItem value="fast">Fast</SelectItem>
@@ -171,7 +171,7 @@ const TreeProfiles = () => {
               <p className="text-muted-foreground">No trees match your filter criteria.</p>
               <Button 
                 variant="outline" 
-                onClick={() => {setSearchTerm(""); setFilterWater(""); setFilterGrowth("");}}
+                onClick={() => {setSearchTerm(""); setFilterWater("all"); setFilterGrowth("all");}}
                 className="mt-4"
               >
                 Clear Filters
